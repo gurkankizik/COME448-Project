@@ -12,6 +12,7 @@ from sklearn.preprocessing import LabelEncoder
 from transformers import BertTokenizer, BertModel
 import torch
 from joblib import Parallel, delayed
+from joblib import dump
 
 # Load texts and labels from folder
 def load_texts_from_folder(folder_path):
@@ -100,10 +101,26 @@ def main():
     print("Extracting BERT embeddings for testing data...")
     X_test_embeddings = extract_bert_embeddings(X_test, tokenizer, bert_model, device=device)
 
+    return X_train_embeddings, X_test_embeddings, y_train, y_test, label_encoder, tokenizer, bert_model, device
+
+# Call main and use returned values
+if __name__ == "__main__":
+    X_train_embeddings, X_test_embeddings, y_train, y_test, label_encoder, tokenizer, bert_model, device = main()
+
     # Train the model
-    model_name = 'SVM'  # Choose the model type
+    model_name = 'XGBoost'  # Choose the model type
     print(f"Training {model_name} model...")
     model = train_classifier(model_name, X_train_embeddings, y_train)
+
+    # Save the trained model
+    model_path = "trained_author_model.joblib"
+    print(f"Saving the trained model to {model_path}...")
+    dump(model, model_path)
+
+    # Save the label encoder
+    label_encoder_path = "label_encoder.joblib"
+    print(f"Saving the label encoder to {label_encoder_path}...")
+    dump(label_encoder, label_encoder_path)
 
     # Evaluate the model
     print("Evaluating the model...")
@@ -112,6 +129,3 @@ def main():
     print(f"Precision: {precision:.4f}")
     print(f"Recall: {recall:.4f}")
     print(f"F1-Score: {f1:.4f}")
-
-if __name__ == "__main__":
-    main()

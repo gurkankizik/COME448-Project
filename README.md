@@ -6,6 +6,7 @@ This project is developed as part of the COME 448 Data Mining and Knowledge Disc
 
 ```
 author_classification.py
+predict_author.py
 dataset_authorship/
     AAltan/
         2012_09_11.txt
@@ -17,6 +18,7 @@ dataset_authorship/
 ```
 
 - **`author_classification.py`**: The main Python script that handles data loading, feature extraction, model training, and evaluation.
+- **`predict_author.py`**: A script to predict the author of a given text using the trained model.
 - **`dataset_authorship/`**: A folder containing text files organized by author names. Each subfolder corresponds to an author, and the text files contain their writings.
 
 ## Features
@@ -31,6 +33,8 @@ dataset_authorship/
    - XGBoost
    - Multi-Layer Perceptron (MLP)
 4. **Model Evaluation**: The trained models are evaluated using metrics such as accuracy, precision, recall, and F1-score.
+5. **Save Model**: The trained model and label encoder are saved for future use.
+6. **Predict Author**: A script to predict the author of a given text using the saved model.
 
 ## Requirements
 
@@ -51,6 +55,7 @@ pip install -r requirements.txt
 
 ## Usage
 
+### 1. Train and Save the Model
 1. Place the dataset in the `dataset_authorship` folder, ensuring that each author's texts are in separate subfolders.
 2. Run the `author_classification.py` script:
 
@@ -61,8 +66,28 @@ python author_classification.py
 3. The script will:
    - Load the dataset.
    - Extract BERT embeddings for the texts.
-   - Train the selected machine learning model (default: SVM).
-   - Evaluate the model and display the results.
+   - Train the selected machine learning model (default: XGBoost).
+   - Save the trained model to `trained_author_model.joblib`.
+   - Save the label encoder to `label_encoder.joblib`.
+
+### 2. Predict Author
+1. Run the `predict_author.py` script:
+
+```bash
+python predict_author.py
+```
+
+2. Modify the `input_text` variable in the script to include the text you want to classify:
+
+```python
+input_text = """Your input text here."""
+```
+
+3. The script will load the saved model and label encoder, extract BERT embeddings for the input text, and predict the author. The result will be displayed in the console:
+
+```
+The predicted author is: [Author Name]
+```
 
 ## Results
 
@@ -74,7 +99,7 @@ The script outputs the following evaluation metrics for the selected model:
 
 ## Customization
 
-- To change the machine learning model, modify the `model_name` variable in the `main()` function. Supported values are:
+- To change the machine learning model, modify the `model_name` variable in the `author_classification.py` script. Supported values are:
   - `'SVM'`
   - `'RandomForest'`
   - `'NaiveBayes'`
