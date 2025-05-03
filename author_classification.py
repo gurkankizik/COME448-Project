@@ -147,7 +147,7 @@ if __name__ == "__main__":
      y_train, y_test, label_encoder) = main()
 
     # Example: Train and evaluate a model using TF-IDF features
-    model_name = 'XGBoost'  # Choose the model type
+    model_name = 'SVM'  # Choose the model type
     print(f"Training {model_name} model with TF-IDF features...")
     model = train_classifier(model_name, X_train_tfidf, y_train)
 
