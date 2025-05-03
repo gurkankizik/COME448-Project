@@ -13,6 +13,7 @@ from transformers import BertTokenizer, BertModel
 import torch
 from joblib import Parallel, delayed
 from joblib import dump
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 # Load texts and labels from folder
 def load_texts_from_folder(folder_path):
@@ -41,6 +42,24 @@ def extract_bert_embeddings(texts, tokenizer, model, max_length=512, batch_size=
             batch_embeddings = outputs.last_hidden_state.mean(dim=1)
             embeddings.append(batch_embeddings)
     return torch.cat(embeddings).cpu().numpy()
+
+# Extract TF-IDF features (word-based)
+def extract_tfidf_features(texts, max_features=5000):
+    vectorizer = TfidfVectorizer(max_features=max_features)
+    tfidf_features = vectorizer.fit_transform(texts)
+    return tfidf_features, vectorizer
+
+# Extract word-based n-grams (2-grams and 3-grams)
+def extract_word_ngrams(texts, max_features=5000, ngram_range=(2, 3)):
+    vectorizer = TfidfVectorizer(max_features=max_features, ngram_range=ngram_range)
+    ngram_features = vectorizer.fit_transform(texts)
+    return ngram_features, vectorizer
+
+# Extract character-based n-grams (2-grams and 3-grams)
+def extract_char_ngrams(texts, max_features=5000, ngram_range=(2, 3)):
+    vectorizer = TfidfVectorizer(max_features=max_features, analyzer='char', ngram_range=ngram_range)
+    char_ngram_features = vectorizer.fit_transform(texts)
+    return char_ngram_features, vectorizer
 
 # Train a classifier
 def train_classifier(model_name, X_train, y_train):
@@ -71,7 +90,7 @@ def evaluate_model(model, X_test, y_test):
     f1 = f1_score(y_test, y_pred, average='weighted')
     return accuracy, precision, recall, f1
 
-# Main function
+# Main function (updated to include all methods)
 def main():
     # Dataset path
     dataset_path = r"dataset_authorship"
@@ -86,45 +105,65 @@ def main():
     # Split data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(texts, labels_encoded, test_size=0.2, random_state=42)
 
-    # Load BERT tokenizer and model
+    # Extract TF-IDF features
+    print("Extracting TF-IDF features...")
+    X_train_tfidf, tfidf_vectorizer = extract_tfidf_features(X_train)
+    X_test_tfidf = tfidf_vectorizer.transform(X_test)
+
+    # Extract word-based n-grams (2-grams and 3-grams)
+    print("Extracting word-based n-grams (2-grams and 3-grams)...")
+    X_train_word_ngrams, word_ngram_vectorizer = extract_word_ngrams(X_train, ngram_range=(2, 3))
+    X_test_word_ngrams = word_ngram_vectorizer.transform(X_test)
+
+    # Extract character-based n-grams (2-grams and 3-grams)
+    print("Extracting character-based n-grams (2-grams and 3-grams)...")
+    X_train_char_ngrams, char_ngram_vectorizer = extract_char_ngrams(X_train, ngram_range=(2, 3))
+    X_test_char_ngrams = char_ngram_vectorizer.transform(X_test)
+
+    # Extract BERT embeddings
     print("Loading BERT model and tokenizer...")
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
     bert_model = BertModel.from_pretrained("bert-base-uncased")
-
-    # Move model to GPU if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     bert_model = bert_model.to(device)
 
-    # Extract BERT embeddings for training and testing data in parallel
     print("Extracting BERT embeddings for training data...")
-    X_train_embeddings = extract_bert_embeddings(X_train, tokenizer, bert_model, device=device)
+    X_train_bert = extract_bert_embeddings(X_train, tokenizer, bert_model, device=device)
     print("Extracting BERT embeddings for testing data...")
-    X_test_embeddings = extract_bert_embeddings(X_test, tokenizer, bert_model, device=device)
+    X_test_bert = extract_bert_embeddings(X_test, tokenizer, bert_model, device=device)
 
-    return X_train_embeddings, X_test_embeddings, y_train, y_test, label_encoder, tokenizer, bert_model, device
+    return (X_train_tfidf, X_test_tfidf, 
+            X_train_word_ngrams, X_test_word_ngrams, 
+            X_train_char_ngrams, X_test_char_ngrams, 
+            X_train_bert, X_test_bert, 
+            y_train, y_test, label_encoder)
 
 # Call main and use returned values
 if __name__ == "__main__":
-    X_train_embeddings, X_test_embeddings, y_train, y_test, label_encoder, tokenizer, bert_model, device = main()
+    (X_train_tfidf, X_test_tfidf, 
+     X_train_word_ngrams, X_test_word_ngrams, 
+     X_train_char_ngrams, X_test_char_ngrams, 
+     X_train_bert, X_test_bert, 
+     y_train, y_test, label_encoder) = main()
 
-    # Train the model
+    # Example: Train and evaluate a model using TF-IDF features
     model_name = 'XGBoost'  # Choose the model type
-    print(f"Training {model_name} model...")
-    model = train_classifier(model_name, X_train_embeddings, y_train)
+    print(f"Training {model_name} model with TF-IDF features...")
+    model = train_classifier(model_name, X_train_tfidf, y_train)
 
     # Save the trained model
-    model_path = "trained_author_model.joblib"
+    model_path = "trained_author_model_tfidf.joblib"
     print(f"Saving the trained model to {model_path}...")
     dump(model, model_path)
 
     # Save the label encoder
-    label_encoder_path = "label_encoder.joblib"
+    label_encoder_path = "label_encoder_tfidf.joblib"
     print(f"Saving the label encoder to {label_encoder_path}...")
     dump(label_encoder, label_encoder_path)
 
     # Evaluate the model
     print("Evaluating the model...")
-    accuracy, precision, recall, f1 = evaluate_model(model, X_test_embeddings, y_test)
+    accuracy, precision, recall, f1 = evaluate_model(model, X_test_tfidf, y_test)
     print(f"Accuracy: {accuracy:.4f}")
     print(f"Precision: {precision:.4f}")
     print(f"Recall: {recall:.4f}")
