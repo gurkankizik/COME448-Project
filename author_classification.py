@@ -74,7 +74,7 @@ def train_classifier(model_name, X_train, y_train):
     elif model_name == 'XGBoost':
         model = XGBClassifier(n_jobs=-1)  # Parallelize XGBoost
     elif model_name == 'MLP':
-        model = MLPClassifier(hidden_layer_sizes=(100,), n_jobs=-1)  # Parallelize MLP
+        model = MLPClassifier(hidden_layer_sizes=(100,))  # Removed n_jobs as it is not supported
     else:
         raise ValueError("Unsupported model")
     
@@ -147,7 +147,7 @@ if __name__ == "__main__":
      y_train, y_test, label_encoder) = main()
 
     # Example: Train and evaluate a model using TF-IDF features
-    model_name = 'SVM'  # Choose the model type
+    model_name = 'MLP'  # Choose the model type
     print(f"Training {model_name} model with TF-IDF features...")
     model = train_classifier(model_name, X_train_tfidf, y_train)
 
